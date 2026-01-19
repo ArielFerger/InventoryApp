@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Obras | Profesional</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <span class="material-icons">architecture</span>
+                <h2>AR Obras</h2>
+            </div>
+            
+            <nav class="menu">
+                <button onclick="app.navegar('dashboard')" class="btn-menu activo" id="btn-dashboard">
+                    <span class="material-icons">dashboard</span> Panel Principal
+                </button>
+                <button onclick="app.navegar('proyecto')" class="btn-menu" id="btn-proyecto">
+                    <span class="material-icons">assignment</span> Gestión de Obra
+                </button>
+                <button onclick="app.navegar('inventario')" class="btn-menu" id="btn-inventario">
+                    <span class="material-icons">inventory_2</span> Precios e Insumos
+                </button>
+            </nav>
+        </aside>
+
+        <main class="content">
+            
+            <section id="view-dashboard" class="vista">
+                <header>
+                    <h1>Panel de Control</h1>
+                    <p>Resumen de proyectos activos</p>
+                </header>
+
+                <div class="kpi-container">
+                    <div class="card-kpi">
+                        <h3>Proyectos Activos</h3>
+                        <span id="kpi-total-proyectos">0</span>
+                    </div>
+                    <div class="card-kpi">
+                        <h3>Materiales en Catálogo</h3>
+                        <span id="kpi-total-materiales">0</span>
+                    </div>
+                </div>
+
+                <div class="card-form">
+                    <h3><span class="material-icons">add_circle</span> Nuevo Proyecto</h3>
+                    <form id="form-nuevo-proyecto">
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>Nombre del Proyecto</label>
+                                <input type="text" id="inp-nombre" placeholder="Ej: Casa Lote 45" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Cliente</label>
+                                <input type="text" id="inp-cliente" placeholder="Ej: Juan Pérez">
+                            </div>
+                        </div>
+                        <div class="grid-2">
+                            <div class="input-group">
+                                <label>Ancho (m)</label>
+                                <input type="number" id="inp-ancho" step="0.01" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Largo (m)</label>
+                                <input type="number" id="inp-largo" step="0.01" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary">Crear Proyecto</button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="view-proyecto" class="vista oculto">
+                
+                <header class="header-split">
+                    <div class="no-print">
+                        <h1>Gestión de Obra</h1>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 10px;">
+                            <select id="select-proyecto-activo" onchange="app.cargarProyecto(this.value)">
+                                <option value="">-- Seleccione un Proyecto --</option>
+                            </select>
+                            
+                            <button onclick="app.abrirModalEditar()" class="btn-secondary" title="Editar Datos">
+                                <span class="material-icons">edit</span>
+                            </button>
+                            <button onclick="app.eliminarProyectoActivo()" class="btn-danger" title="Eliminar Proyecto">
+                                <span class="material-icons">delete</span>
+                            </button>
+                            <button onclick="app.generarPDF()" class="btn-primary" title="Imprimir / PDF">
+                                <span class="material-icons">picture_as_pdf</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="print-only header-reporte">
+                        <h1 id="reporte-nombre-proyecto">Proyecto</h1>
+                        <p>Cliente: <span id="reporte-cliente"></span> | Sup: <span id="reporte-superficie"></span> m²</p>
+                    </div>
+
+                    <div id="info-header-proyecto" class="tag-presupuesto">
+                        Total: $0.00
+                    </div>
+                </header>
+
+                <div id="panel-detalle-proyecto" class="oculto">
+                    <div class="card-add-material no-print">
+                        <div class="grid-3-auto">
+                            <select id="select-material-add"></select>
+                            <input type="number" id="inp-cantidad-add" placeholder="Cantidad" min="1">
+                            <button onclick="app.agregarMaterial()" class="btn-secondary">
+                                <span class="material-icons">add_shopping_cart</span> Agregar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Material</th>
+                                    <th>Categoría</th>
+                                    <th class="text-right">Precio Unit.</th>
+                                    <th class="text-center">Cant.</th>
+                                    <th class="text-right">Subtotal</th>
+                                    <th class="text-center">Incidencia %</th>
+                                    <th class="text-center no-print">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-items-proyecto"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="empty-state-proyecto" class="empty-state no-print">
+                    <span class="material-icons">arrow_upward</span>
+                    <p>Selecciona un proyecto arriba para comenzar a trabajar.</p>
+                </div>
+
+                <dialog id="modal-editar" class="modal">
+                    <div class="modal-content">
+                        <h3>Editar Proyecto</h3>
+                        <form id="form-editar-proyecto">
+                            <div class="input-group">
+                                <label>Nombre</label>
+                                <input type="text" id="edit-nombre" required>
+                            </div>
+                            <div class="input-group">
+                                <label>Cliente</label>
+                                <input type="text" id="edit-cliente">
+                            </div>
+                            <div class="grid-2">
+                                <div class="input-group">
+                                    <label>Ancho</label>
+                                    <input type="number" id="edit-ancho" step="0.01">
+                                </div>
+                                <div class="input-group">
+                                    <label>Largo</label>
+                                    <input type="number" id="edit-largo" step="0.01">
+                                </div>
+                            </div>
+                            <div class="modal-actions">
+                                <button type="button" onclick="document.getElementById('modal-editar').close()" class="btn-secondary">Cancelar</button>
+                                <button type="submit" class="btn-primary">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </dialog>
+            </section>
+
+            <section id="view-inventario" class="vista oculto no-print">
+                <header>
+                    <h1>Catálogo y Precios</h1>
+                    <p>Gestión global de inflación y nuevos materiales</p>
+                </header>
+
+                <div class="tools-bar">
+                    <div class="tool-group">
+                        <label>Aumento Masivo (%)</label>
+                        <div class="input-btn-group">
+                            <input type="number" id="inp-aumento-pct" placeholder="Ej: 15" style="width: 80px;">
+                            <select id="sel-cat-aumento">
+                                <option value="TODOS">Todo el catálogo</option>
+                                <option value="Obra Gruesa">Obra Gruesa</option>
+                                <option value="Terminaciones">Terminaciones</option>
+                                <option value="Instalaciones">Instalaciones</option>
+                                <option value="Electricidad">Electricidad</option>
+                            </select>
+                            <button onclick="app.aplicarInflacion()" class="btn-danger">Aplicar</button>
+                        </div>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <button onclick="app.toggleNuevoMaterial()" class="btn-primary">
+                            <span class="material-icons">add</span> Nuevo Material
+                        </button>
+                    </div>
+                </div>
+
+                <div id="form-nuevo-material" class="card-form oculto" style="margin-bottom: 20px; border-left: 4px solid #3498db;">
+                    <h4>Registrar Nuevo Material</h4>
+                    <div class="grid-4">
+                        <input type="text" id="new-mat-nombre" placeholder="Nombre">
+                        <select id="new-mat-cat">
+                            <option value="Obra Gruesa">Obra Gruesa</option>
+                            <option value="Terminaciones">Terminaciones</option>
+                            <option value="Instalaciones">Instalaciones</option>
+                            <option value="Electricidad">Electricidad</option>
+                        </select>
+                        <input type="number" id="new-mat-precio" placeholder="Precio Base">
+                        <button onclick="app.guardarNuevoMaterial()" class="btn-secondary">Guardar</button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Categoría</th>
+                                <th class="text-right">Precio Actual (ARS)</th>
+                                <th class="text-center">Editar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-inventario"></tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="renderer.js"></script>
+</body>
+</html>

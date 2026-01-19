@@ -1,0 +1,15 @@
+# Dependencias
+node_modules/
+
+# Base de datos (No queremos subir tus datos reales)
+*.db
+*.sqlite
+
+# Archivos de sistema y logs
+.DS_Store
+npm-debug.log*
+
+# Carpetas de compilación (si generas el ejecutable después)
+dist/
+out/
+build/
