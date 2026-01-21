@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('db', {
+  generatePDF: (nombre) => ipcRenderer.invoke('generate-pdf', nombre),
   getMateriales: () => ipcRenderer.invoke('get-materiales'),
   saveMaterial: (m) => ipcRenderer.invoke('save-material', m),
 

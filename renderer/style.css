@@ -70,10 +70,24 @@ p { color: var(--text-muted); }
 .grid-4 { display: grid; grid-template-columns: 2fr 1.5fr 1fr 1fr; gap: 10px; }
 
 .input-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
-input, select {
-    width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 6px;
-    font-size: 1rem; outline: none; transition: 0.3s;
+input, select, textarea {
+    width: 100%; 
+    padding: 10px; 
+    border: 1px solid var(--border); 
+    border-radius: 6px;
+    font-size: 1rem; 
+    outline: none; 
+    transition: 0.3s;
+    background-color: white; /* Asegura fondo blanco */
+    font-family: inherit;    /* Para que use la misma fuente que el resto */
 }
+
+textarea {
+    resize: vertical;
+}
+
+input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
 input:focus, select:focus { border-color: var(--accent); }
 
 /* BOTONES */
@@ -114,24 +128,90 @@ dialog::backdrop { background: rgba(0,0,0,0.5); }
 .modal-content { padding: 25px; background: white; display: flex; flex-direction: column; gap: 15px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
 
-/* --- NUEVOS ESTILOS: IMPRESIÓN (PDF) --- */
+/* --- ESTILO PARA LA DESCRIPCIÓN EN PROYECTO --- */
+.project-description {
+    background-color: #f8f9fa;
+    color: #444;
+    padding: 15px;
+    border-left: 5px solid var(--accent); /* Borde azul a la izquierda */
+    border-radius: 4px;
+    margin-bottom: 20px;
+    font-style: italic;
+    line-height: 1.5;
+    white-space: pre-wrap; /* Esto respeta los saltos de línea que escribas */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* --- ESTILOS PARA PDF / IMPRESIÓN --- */
 .print-only { display: none; } 
 
 @media print {
     @page { margin: 1.5cm; }
     
-    .sidebar, .tools-bar, .card-add-material, .no-print, .btn-icon, .empty-state {
+    /* 1. Ocultar interfaz de usuario */
+    .sidebar, .tools-bar, .card-add-material, .no-print, .btn-icon, .empty-state, .tag-presupuesto {
         display: none !important;
     }
 
+    /* 2. Ocultar columnas innecesarias (Dejar solo Material y Cantidad) */
+    /* Índices: 2:Cat, 3:Precio, 5:Subtotal, 6:Incidencia, 7:Acciones */
+    th:nth-child(2), td:nth-child(2),
+    th:nth-child(3), td:nth-child(3),
+    th:nth-child(5), td:nth-child(5),
+    th:nth-child(6), td:nth-child(6),
+    th:nth-child(7), td:nth-child(7) {
+        display: none !important;
+    }
+
+    /* 3. Resetear contenedores */
     .app-container { height: auto; display: block; background: white; }
     .content { padding: 0; overflow: visible; }
     
-    .print-only { display: block; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-    .header-reporte h1 { font-size: 24pt; color: black; margin: 0; }
-    .header-reporte p { font-size: 12pt; color: #555; margin-top: 5px; }
+    /* Eliminar estilos "bonitos" del contenedor de tabla */
+    .table-container {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        border: none !important;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* 4. Cabecera del Documento */
+    .print-only { 
+        display: block; 
+        margin-bottom: 20px; 
+        border-bottom: 2px solid #000; /* Línea negra simple */
+        padding-bottom: 10px; 
+        font-family: Arial, sans-serif; /* Fuente estándar para documentos */
+    }
+
+    /* 5. TABLA ESTILO PLANILLA TÉCNICA */
+    table { 
+        width: 100%; 
+        border-collapse: collapse; /* Hace que los bordes se unan en líneas simples */
+        border: 1px solid #000;    /* Borde exterior negro */
+    }
+
+    th { 
+        background-color: transparent !important; /* Sin fondo gris */
+        color: #000 !important;    /* Texto negro */
+        border: 1px solid #000;    /* Cuadrícula negra */
+        padding: 8px;
+        font-weight: bold;
+        text-transform: uppercase;
+        font-size: 10pt;
+    }
+
+    td { 
+        border: 1px solid #000;    /* Cuadrícula negra */
+        padding: 8px;
+        font-size: 11pt;
+        color: #000;
+    }
     
-    table { border: 1px solid #ddd; width: 100%; }
-    th { background-color: #eee !important; color: black !important; -webkit-print-color-adjust: exact; }
-    td, th { padding: 8px; font-size: 10pt; border: 1px solid #ddd; }
+    /* Alinear columna Cantidad */
+    th:nth-child(4), td:nth-child(4) { 
+        text-align: center; 
+        width: 150px; /* Ancho fijo para que se vea ordenado */
+    }
 }

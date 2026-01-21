@@ -21,6 +21,7 @@ db.serialize(() => {
       id INTEGER PRIMARY KEY,
       nombre TEXT,
       cliente TEXT,
+      descripcion TEXT,  /* <--- NUEVA COLUMNA */
       ancho REAL,
       largo REAL,
       fecha TEXT
@@ -35,6 +36,7 @@ db.serialize(() => {
       cantidad REAL
     )
   `)
+  
 
 })
 

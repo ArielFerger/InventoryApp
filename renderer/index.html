@@ -12,8 +12,8 @@
     <div class="app-container">
         <aside class="sidebar">
             <div class="brand">
-                <span class="material-icons">architecture</span>
-                <h2>AR Obras</h2>
+                <span class="material-icons">CONSTRUCIONES</span>
+                <h2>GERDAU</h2>
             </div>
             
             <nav class="menu">
@@ -51,26 +51,31 @@
                 <div class="card-form">
                     <h3><span class="material-icons">add_circle</span> Nuevo Proyecto</h3>
                     <form id="form-nuevo-proyecto">
-                        <div class="grid-2">
-                            <div class="input-group">
-                                <label>Nombre del Proyecto</label>
-                                <input type="text" id="inp-nombre" placeholder="Ej: Casa Lote 45" required>
-                            </div>
-                            <div class="input-group">
-                                <label>Cliente</label>
-                                <input type="text" id="inp-cliente" placeholder="Ej: Juan Pérez">
-                            </div>
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>Nombre del Proyecto</label>
+                            <input type="text" id="inp-nombre" placeholder="Ej: Casa Lote 45" required>
                         </div>
-                        <div class="grid-2">
-                            <div class="input-group">
-                                <label>Ancho (m)</label>
-                                <input type="number" id="inp-ancho" step="0.01" required>
-                            </div>
-                            <div class="input-group">
-                                <label>Largo (m)</label>
-                                <input type="number" id="inp-largo" step="0.01" required>
-                            </div>
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>Cliente</label>
+                            <input type="text" id="inp-cliente" placeholder="Ej: Juan Pérez">
                         </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>Descripción (Opcional)</label>
+                            <textarea id="inp-descripcion" rows="3" placeholder="Detalles técnicos, notas de ubicación, etc..."></textarea>
+                        </div>
+
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>Ancho (m)</label>
+                            <input type="number" id="inp-ancho" step="0.01" required>
+                        </div>
+                        
+                        <div class="input-group" style="margin-bottom: 15px;">
+                            <label>Largo (m)</label>
+                            <input type="number" id="inp-largo" step="0.01" required>
+                        </div>
+                        
                         <button type="submit" class="btn-primary">Crear Proyecto</button>
                     </form>
                 </div>
@@ -99,14 +104,19 @@
                     </div>
                     
                     <div class="print-only header-reporte">
-                        <h1 id="reporte-nombre-proyecto">Proyecto</h1>
-                        <p>Cliente: <span id="reporte-cliente"></span> | Sup: <span id="reporte-superficie"></span> m²</p>
+                        <h1 id="reporte-nombre-proyecto" style="font-size: 24pt; margin-bottom: 5px;">Nombre del Proyecto</h1>
+                        <p style="font-size: 12pt; color: #333;">
+                            Fecha de emisión: <strong id="reporte-fecha">--/--/----</strong>
+                        </p>
+                        <h3 style="margin-top: 20px; text-decoration: underline;">Listado de Materiales</h3>
                     </div>
 
                     <div id="info-header-proyecto" class="tag-presupuesto">
                         Total: $0.00
                     </div>
                 </header>
+                <div class="project-description-label no-print">Descripción</div>
+                <div id="display-descripcion-proyecto" class="project-description no-print oculto"></div>
 
                 <div id="panel-detalle-proyecto" class="oculto">
                     <div class="card-add-material no-print">
@@ -138,7 +148,6 @@
                 </div>
                 
                 <div id="empty-state-proyecto" class="empty-state no-print">
-                    <span class="material-icons">arrow_upward</span>
                     <p>Selecciona un proyecto arriba para comenzar a trabajar.</p>
                 </div>
 
@@ -146,24 +155,32 @@
                     <div class="modal-content">
                         <h3>Editar Proyecto</h3>
                         <form id="form-editar-proyecto">
-                            <div class="input-group">
+                            
+                            <div class="input-group" style="margin-bottom: 15px;">
                                 <label>Nombre</label>
                                 <input type="text" id="edit-nombre" required>
                             </div>
-                            <div class="input-group">
+                            
+                            <div class="input-group" style="margin-bottom: 15px;">
                                 <label>Cliente</label>
                                 <input type="text" id="edit-cliente">
                             </div>
-                            <div class="grid-2">
-                                <div class="input-group">
-                                    <label>Ancho</label>
-                                    <input type="number" id="edit-ancho" step="0.01">
-                                </div>
-                                <div class="input-group">
-                                    <label>Largo</label>
-                                    <input type="number" id="edit-largo" step="0.01">
-                                </div>
+
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label>Descripción</label>
+                                <textarea id="edit-descripcion" rows="3"></textarea>
                             </div>
+
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label>Ancho</label>
+                                <input type="number" id="edit-ancho" step="0.01">
+                            </div>
+                            
+                            <div class="input-group" style="margin-bottom: 15px;">
+                                <label>Largo</label>
+                                <input type="number" id="edit-largo" step="0.01">
+                            </div>
+
                             <div class="modal-actions">
                                 <button type="button" onclick="document.getElementById('modal-editar').close()" class="btn-secondary">Cancelar</button>
                                 <button type="submit" class="btn-primary">Guardar Cambios</button>
@@ -179,6 +196,8 @@
                     <p>Gestión global de inflación y nuevos materiales</p>
                 </header>
 
+                <datalist id="list-categorias"></datalist>
+
                 <div class="tools-bar">
                     <div class="tool-group">
                         <label>Aumento Masivo (%)</label>
@@ -186,10 +205,6 @@
                             <input type="number" id="inp-aumento-pct" placeholder="Ej: 15" style="width: 80px;">
                             <select id="sel-cat-aumento">
                                 <option value="TODOS">Todo el catálogo</option>
-                                <option value="Obra Gruesa">Obra Gruesa</option>
-                                <option value="Terminaciones">Terminaciones</option>
-                                <option value="Instalaciones">Instalaciones</option>
-                                <option value="Electricidad">Electricidad</option>
                             </select>
                             <button onclick="app.aplicarInflacion()" class="btn-danger">Aplicar</button>
                         </div>
@@ -206,12 +221,9 @@
                     <h4>Registrar Nuevo Material</h4>
                     <div class="grid-4">
                         <input type="text" id="new-mat-nombre" placeholder="Nombre">
-                        <select id="new-mat-cat">
-                            <option value="Obra Gruesa">Obra Gruesa</option>
-                            <option value="Terminaciones">Terminaciones</option>
-                            <option value="Instalaciones">Instalaciones</option>
-                            <option value="Electricidad">Electricidad</option>
-                        </select>
+                        
+                        <input type="text" id="new-mat-cat" list="list-categorias" placeholder="Categoría (Escriba o elija)">
+                        
                         <input type="number" id="new-mat-precio" placeholder="Precio Base">
                         <button onclick="app.guardarNuevoMaterial()" class="btn-secondary">Guardar</button>
                     </div>
@@ -221,16 +233,42 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>ID</th>
                                 <th>Nombre</th>
                                 <th>Categoría</th>
-                                <th class="text-right">Precio Actual (ARS)</th>
-                                <th class="text-center">Editar</th>
+                                <th class="text-right">Precio (ARS)</th>
+                                <th class="text-center">Acciones</th>
                             </tr>
                         </thead>
                         <tbody id="tabla-inventario"></tbody>
                     </table>
                 </div>
+
+                <dialog id="modal-editar-material" class="modal">
+                    <div class="modal-content">
+                        <h3>Editar Material</h3>
+                        <form id="form-editar-material">
+                            <input type="hidden" id="edit-mat-id"> <div class="input-group">
+                                <label>Nombre del Material</label>
+                                <input type="text" id="edit-mat-nombre" required>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label>Categoría</label>
+                                <input type="text" id="edit-mat-cat" list="list-categorias" required placeholder="Ej: Electricidad">
+                            </div>
+
+                            <div class="input-group">
+                                <label>Precio Unitario</label>
+                                <input type="number" id="edit-mat-precio" step="0.01" required>
+                            </div>
+
+                            <div class="modal-actions">
+                                <button type="button" onclick="document.getElementById('modal-editar-material').close()" class="btn-secondary">Cancelar</button>
+                                <button type="submit" class="btn-primary">Guardar Cambios</button>
+                            </div>
+                        </form>
+                    </div>
+                </dialog>
             </section>
 
         </main>

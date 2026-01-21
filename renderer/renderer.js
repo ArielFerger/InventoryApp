@@ -1,5 +1,5 @@
 /* ==========================================================================
-   renderer.js - VERSIÓN COMPLETA Y FUNCIONAL
+   renderer.js - VERSIÓN DEFINITIVA (Con Descripción de Proyecto)
    ========================================================================== */
 
 /* 1. MODELOS */
@@ -21,10 +21,12 @@ class ItemProyecto {
 }
 
 class Proyecto {
-    constructor(id, nombre, cliente, ancho, largo) {
+    // ACTUALIZADO: Se agrega el parámetro 'descripcion'
+    constructor(id, nombre, cliente, descripcion, ancho, largo) {
         this.id = id;
         this.nombre = nombre;
         this.cliente = cliente;
+        this.descripcion = descripcion || ""; // Guarda texto vacío si es nulo
         this.ancho = Number(ancho);
         this.largo = Number(largo);
         this.items = []; 
@@ -36,35 +38,52 @@ class Proyecto {
     }
 }
 
-/* 2. REPOSITORIO (POINTERS AL PRELOAD) */
+/* 2. REPOSITORIO (Puente con preload.js) */
 const DB = {
   getMateriales: () => window.db.getMateriales(),
   saveMaterial: (m) => window.db.saveMaterial(m),
 
   getProyectos: () => window.db.getProyectos(),
   saveProyecto: (p) => window.db.saveProyecto(p),
-  deleteProyecto: (id) => window.db.deleteProyecto(id), // Agregado
+  deleteProyecto: (id) => window.db.deleteProyecto(id),
 
   getItems: (id) => window.db.getItems(id),
   saveItem: (i) => window.db.saveItem(i),
-  clearItems: (id) => window.db.clearItems(id)
+  clearItems: (id) => window.db.clearItems(id),
+  
+  generatePDF: (nombre) => window.db.generatePDF(nombre)
 }
 
-/* 3. CONTROLADOR */
+/* 3. CONTROLADOR PRINCIPAL */
 const app = {
     proyectoActivo: null,
 
+    /* --- INICIO --- */
     start: async () => {
         try {
             await app.actualizarKPIs();
+            await app.actualizarListasCategorias(); // Cargar categorías dinámicas
             await app.cargarSelectProyectos();
             await app.cargarTablaInventario();
             await app.cargarSelectMateriales();
             
+            // Listener: Crear Proyecto
             document.getElementById('form-nuevo-proyecto').addEventListener('submit', (e) => {
                 e.preventDefault();
                 app.crearProyecto();
             });
+
+            // Listener: Editar Proyecto (El submit se maneja en abrirModalEditar)
+            document.getElementById('form-editar-proyecto').addEventListener('submit', (e) => {
+                e.preventDefault();
+            });
+
+            // Listener: Editar Material
+            document.getElementById('form-editar-material').addEventListener('submit', (e) => {
+                e.preventDefault();
+                app.guardarEdicionMaterial();
+            });
+
         } catch (error) {
             console.error("Error al iniciar:", error);
         }
@@ -78,7 +97,10 @@ const app = {
         document.getElementById(`btn-${vista}`).classList.add('activo');
 
         if (vista === 'dashboard') app.actualizarKPIs();
-        if (vista === 'inventario') app.cargarTablaInventario();
+        if (vista === 'inventario') {
+            app.cargarTablaInventario();
+            app.actualizarListasCategorias();
+        }
     },
 
     actualizarKPIs: async () => {
@@ -88,14 +110,54 @@ const app = {
         document.getElementById('kpi-total-materiales').textContent = materiales.length;
     },
 
+    /* --- GESTIÓN DE CATEGORÍAS --- */
+    actualizarListasCategorias: async () => {
+        const materiales = await DB.getMateriales();
+        
+        const categorias = new Set(materiales.map(m => m.categoria));
+        // Valores por defecto
+        categorias.add("Obra Gruesa");
+        categorias.add("Terminaciones");
+        categorias.add("Instalaciones");
+        categorias.add("Electricidad");
+        
+        // 1. Llenar Datalist
+        const datalist = document.getElementById('list-categorias');
+        if(datalist) {
+            datalist.innerHTML = '';
+            categorias.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                datalist.appendChild(opt);
+            });
+        }
+
+        // 2. Llenar Select Inflación
+        const selectAumento = document.getElementById('sel-cat-aumento');
+        if(selectAumento) {
+            const valActual = selectAumento.value;
+            selectAumento.innerHTML = '<option value="TODOS">Todo el catálogo</option>';
+            categorias.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat;
+                opt.textContent = cat;
+                selectAumento.appendChild(opt);
+            });
+            if (valActual && valActual !== 'TODOS') selectAumento.value = valActual;
+        }
+    },
+
+    /* --- PROYECTOS --- */
     crearProyecto: async () => {
         const nombre = document.getElementById('inp-nombre').value;
         const cliente = document.getElementById('inp-cliente').value;
+        const desc = document.getElementById('inp-descripcion').value; // NUEVO
         const ancho = document.getElementById('inp-ancho').value;
         const largo = document.getElementById('inp-largo').value;
 
         const newId = Date.now();
-        const nuevo = new Proyecto(newId, nombre, cliente, ancho, largo);
+        // Pasamos la descripción al constructor
+        const nuevo = new Proyecto(newId, nombre, cliente, desc, ancho, largo);
 
         await DB.saveProyecto(nuevo);
         alert('Proyecto creado exitosamente');
@@ -123,60 +185,64 @@ const app = {
         if(valorActual) select.value = valorActual;
     },
 
-    cargarSelectMateriales: async () => {
-        const lista = await DB.getMateriales();
-        const select = document.getElementById('select-material-add');
-        select.innerHTML = '';
-        lista.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.id;
-            opt.textContent = `${m.nombre} - ${app.formatMoney(m.precio)}`;
-            select.appendChild(opt);
-        });
-    },
-
     cargarProyecto: async (id) => {
+        // A. Si no hay ID (se deseleccionó), ocultamos todo
         if (!id) {
             document.getElementById('empty-state-proyecto').classList.remove('oculto');
             document.getElementById('panel-detalle-proyecto').classList.add('oculto');
+            document.getElementById('display-descripcion-proyecto').classList.add('oculto'); // Ocultar descripción
             app.proyectoActivo = null;
             return;
         }
 
         const proyectos = await DB.getProyectos();
-        const proyectoData = proyectos.find(p => p.id == id);
+        const p = proyectos.find(proj => proj.id == id);
         
-        if (proyectoData) {
-            app.proyectoActivo = new Proyecto(proyectoData.id, proyectoData.nombre, proyectoData.cliente, proyectoData.ancho, proyectoData.largo);
+        if (p) {
+            // Reconstruimos el objeto
+            app.proyectoActivo = new Proyecto(p.id, p.nombre, p.cliente, p.descripcion, p.ancho, p.largo);
             const itemsDB = await DB.getItems(id);
             app.proyectoActivo.items = itemsDB.map(i => new ItemProyecto(i.proyecto_id, i.material_id, i.cantidad));
 
+            // B. Mostrar Paneles Principales
             document.getElementById('empty-state-proyecto').classList.add('oculto');
             document.getElementById('panel-detalle-proyecto').classList.remove('oculto');
             
+            // C. LÓGICA NUEVA: Mostrar/Ocultar Descripción
+            const elDesc = document.getElementById('display-descripcion-proyecto');
+            if (app.proyectoActivo.descripcion && app.proyectoActivo.descripcion.trim() !== "") {
+                elDesc.textContent = app.proyectoActivo.descripcion;
+                elDesc.classList.remove('oculto');
+            } else {
+                elDesc.textContent = "";
+                elDesc.classList.add('oculto');
+            }
+            
             await app.renderizarTablaItems();
-            app.actualizarDatosReporte(); // Prepara los datos para imprimir
+            app.actualizarDatosReporte(); 
         }
     },
 
-    // --- NUEVAS FUNCIONES DE EDICIÓN Y REPORTE ---
-    
     abrirModalEditar: () => {
         if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
         
+        // Llenar datos actuales en el modal
         document.getElementById('edit-nombre').value = app.proyectoActivo.nombre;
         document.getElementById('edit-cliente').value = app.proyectoActivo.cliente;
+        document.getElementById('edit-descripcion').value = app.proyectoActivo.descripcion; // NUEVO
         document.getElementById('edit-ancho').value = app.proyectoActivo.ancho;
         document.getElementById('edit-largo').value = app.proyectoActivo.largo;
 
         const modal = document.getElementById('modal-editar');
         modal.showModal();
 
+        // Manejar el guardado
         document.getElementById('form-editar-proyecto').onsubmit = async (e) => {
             e.preventDefault();
             
             app.proyectoActivo.nombre = document.getElementById('edit-nombre').value;
             app.proyectoActivo.cliente = document.getElementById('edit-cliente').value;
+            app.proyectoActivo.descripcion = document.getElementById('edit-descripcion').value; // NUEVO
             app.proyectoActivo.ancho = document.getElementById('edit-ancho').value;
             app.proyectoActivo.largo = document.getElementById('edit-largo').value;
             
@@ -206,21 +272,18 @@ const app = {
         }
     },
 
-    generarPDF: () => {
-        if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
-        app.actualizarDatosReporte();
-        window.print();
+    /* --- ITEMS / MATERIALES EN OBRA --- */
+    cargarSelectMateriales: async () => {
+        const lista = await DB.getMateriales();
+        const select = document.getElementById('select-material-add');
+        select.innerHTML = '';
+        lista.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.nombre} - ${app.formatMoney(m.precio)}`;
+            select.appendChild(opt);
+        });
     },
-
-    actualizarDatosReporte: () => {
-        if(app.proyectoActivo) {
-            document.getElementById('reporte-nombre-proyecto').textContent = app.proyectoActivo.nombre;
-            document.getElementById('reporte-cliente').textContent = app.proyectoActivo.cliente;
-            document.getElementById('reporte-superficie').textContent = app.proyectoActivo.superficie;
-        }
-    },
-
-    // --- FUNCIONES ITEM Y MATERIALES ---
 
     agregarMaterial: async () => {
         if (!app.proyectoActivo) return;
@@ -307,8 +370,41 @@ const app = {
         document.getElementById('info-header-proyecto').textContent = `Total: ${app.formatMoney(totalProyecto)}`;
     },
 
-    // --- INVENTARIO Y PRECIOS ---
+    /* --- PDF Y REPORTES --- */
+    generarPDF: async () => {
+        if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
+        
+        app.actualizarDatosReporte();
+        
+        // Poner fecha actual
+        const fechaHoy = new Date().toLocaleDateString('es-AR');
+        const elFecha = document.getElementById('reporte-fecha');
+        if(elFecha) elFecha.textContent = fechaHoy;
 
+        // Sanitizar nombre de archivo
+        let nombreLimpio = app.proyectoActivo.nombre.trim();
+        nombreLimpio = nombreLimpio.replace(/\s+/g, '_');
+        nombreLimpio = nombreLimpio.replace(/[^a-zA-Z0-9_\-]/g, '');
+        
+        const nombreArchivo = `${nombreLimpio}_Materiales_${fechaHoy.replace(/\//g, '-')}`;
+
+        try {
+            const guardado = await window.db.generatePDF(nombreArchivo);
+            if(guardado) alert("Listado guardado correctamente en PDF.");
+        } catch (error) {
+            console.error(error);
+            alert("Error al guardar PDF.");
+        }
+    },
+
+    actualizarDatosReporte: () => {
+        if(app.proyectoActivo) {
+            const elNombre = document.getElementById('reporte-nombre-proyecto');
+            if (elNombre) elNombre.textContent = app.proyectoActivo.nombre;
+        }
+    },
+
+    /* --- INVENTARIO / MATERIALES --- */
     cargarTablaInventario: async () => {
         const lista = await DB.getMateriales();
         const tbody = document.getElementById('tabla-inventario');
@@ -317,34 +413,80 @@ const app = {
         lista.forEach(m => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${m.id}</td>
                 <td>${m.nombre}</td>
-                <td>${m.categoria}</td>
+                <td><span class="badge">${m.categoria}</span></td>
                 <td class="text-right">
-                    <input type="number" 
-                           value="${m.precio}" 
-                           onchange="app.actualizarPrecioUnitario(${m.id}, this.value)"
-                           style="width: 120px; text-align: right;">
+                    <strong>${app.formatMoney(m.precio)}</strong>
                 </td>
                 <td class="text-center">
-                   <span class="material-icons" style="color:#ccc">edit</span>
+                   <button class="btn-icon" onclick="app.abrirModalEditarMaterial(${m.id})" title="Editar Material">
+                        <span class="material-icons" style="color:var(--accent)">edit</span>
+                   </button>
                 </td>
             `;
             tbody.appendChild(tr);
         });
     },
 
-    actualizarPrecioUnitario: async (id, nuevoVal) => {
-        let lista = await DB.getMateriales();
-        const mat = lista.find(m => m.id == id);
-        if (mat) {
-            mat.precio = Number(nuevoVal);
-            await DB.saveMaterial(mat);
-            if (app.proyectoActivo) {
-                await app.cargarSelectMateriales(); 
-                await app.renderizarTablaItems(); 
-            }
-        }
+    abrirModalEditarMaterial: async (id) => {
+        const lista = await DB.getMateriales();
+        const material = lista.find(m => m.id === id);
+        if(!material) return;
+
+        document.getElementById('edit-mat-id').value = material.id;
+        document.getElementById('edit-mat-nombre').value = material.nombre;
+        document.getElementById('edit-mat-cat').value = material.categoria;
+        document.getElementById('edit-mat-precio').value = material.precio;
+
+        document.getElementById('modal-editar-material').showModal();
+    },
+
+    guardarEdicionMaterial: async () => {
+        const id = parseInt(document.getElementById('edit-mat-id').value);
+        const nombre = document.getElementById('edit-mat-nombre').value;
+        const cat = document.getElementById('edit-mat-cat').value; 
+        const precio = document.getElementById('edit-mat-precio').value;
+
+        if (!nombre || !cat || !precio) return alert("Complete todos los campos");
+
+        const materialEditado = new Material(id, nombre, cat, precio);
+        
+        await DB.saveMaterial(materialEditado);
+        
+        document.getElementById('modal-editar-material').close();
+        alert("Material actualizado");
+
+        await app.actualizarListasCategorias();
+        await app.cargarTablaInventario();
+        await app.cargarSelectMateriales();
+        if(app.proyectoActivo) await app.renderizarTablaItems();
+    },
+
+    toggleNuevoMaterial: () => {
+        document.getElementById('form-nuevo-material').classList.toggle('oculto');
+    },
+
+    guardarNuevoMaterial: async () => {
+        const nom = document.getElementById('new-mat-nombre').value;
+        const cat = document.getElementById('new-mat-cat').value; 
+        const pre = document.getElementById('new-mat-precio').value;
+
+        if (!nom || !pre || !cat) return alert("Complete los datos");
+
+        const lista = await DB.getMateriales();
+        const newId = lista.length > 0 ? Math.max(...lista.map(m => m.id)) + 1 : 1;
+
+        const nuevoMat = new Material(newId, nom, cat, pre);
+        await DB.saveMaterial(nuevoMat);
+        
+        await app.actualizarListasCategorias();
+        await app.cargarTablaInventario();
+        await app.cargarSelectMateriales();
+        app.toggleNuevoMaterial();
+        
+        document.getElementById('new-mat-nombre').value = '';
+        document.getElementById('new-mat-cat').value = '';
+        document.getElementById('new-mat-precio').value = '';
     },
 
     aplicarInflacion: async () => {
@@ -371,32 +513,10 @@ const app = {
         }
     },
 
-    toggleNuevoMaterial: () => {
-        document.getElementById('form-nuevo-material').classList.toggle('oculto');
-    },
-
-    guardarNuevoMaterial: async () => {
-        const nom = document.getElementById('new-mat-nombre').value;
-        const cat = document.getElementById('new-mat-cat').value;
-        const pre = document.getElementById('new-mat-precio').value;
-        if (!nom || !pre) return alert("Complete los datos");
-
-        const lista = await DB.getMateriales();
-        const newId = lista.length > 0 ? Math.max(...lista.map(m => m.id)) + 1 : 1;
-
-        const nuevoMat = new Material(newId, nom, cat, pre);
-        await DB.saveMaterial(nuevoMat);
-        await app.cargarTablaInventario();
-        await app.cargarSelectMateriales();
-        app.toggleNuevoMaterial();
-        
-        document.getElementById('new-mat-nombre').value = '';
-        document.getElementById('new-mat-precio').value = '';
-    },
-
     formatMoney: (val) => {
         return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(val);
     }
 };
 
+// INICIAR APLICACIÓN
 document.addEventListener('DOMContentLoaded', app.start);
