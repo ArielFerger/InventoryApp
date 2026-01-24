@@ -3,6 +3,11 @@
    ========================================================================== */
 
 /* 1. MODELOS */
+// Clases que representan las entidades principales del sistema.
+// Clase Material: Representa un material con atributos básicos.
+// Clase ItemProyecto: Representa un material asociado a un proyecto.
+// Clase Proyecto: Representa un proyecto con atributos y métodos útiles.
+
 class Material {
     constructor(id, nombre, categoria, precio) {
         this.id = id;
@@ -38,6 +43,9 @@ class Proyecto {
 }
 
 /* 2. REPOSITORIO */
+// Objeto DB: Interfaz para interactuar con la base de datos.
+// Contiene métodos para obtener, guardar y eliminar materiales, proyectos e ítems.
+
 const DB = {
   getMateriales: () => window.db.getMateriales(),
   saveMaterial: (m) => window.db.saveMaterial(m),
@@ -54,10 +62,13 @@ const DB = {
 }
 
 /* 3. CONTROLADOR PRINCIPAL */
+// Objeto app: Contiene la lógica principal de la aplicación.
+
 const app = {
     proyectoActivo: null,
 
     /* --- INICIO --- */
+    // Método start: Inicializa la aplicación cargando datos y configurando eventos.
     start: async () => {
         try {
             await app.actualizarKPIs();
@@ -125,6 +136,7 @@ const app = {
     },
 
     /* --- GESTIÓN DE CATEGORÍAS --- */
+    // Método actualizarListasCategorias: Actualiza las listas y selectores de categorías.
     actualizarListasCategorias: async () => {
         const materiales = await DB.getMateriales();
         
@@ -159,6 +171,12 @@ const app = {
     },
 
     /* --- PROYECTOS --- */
+    // Métodos para gestionar proyectos:
+    // - crearProyecto: Crea un nuevo proyecto y actualiza la vista.
+    // - cargarSelectProyectos: Carga los proyectos en un selector.
+    // - cargarProyecto: Carga los detalles de un proyecto seleccionado.
+    // - abrirModalEditar: Abre el modal para editar un proyecto.
+    // - eliminarProyectoActivo: Elimina el proyecto activo.
     crearProyecto: async () => {
         const nombre = document.getElementById('inp-nombre').value;
         const cliente = document.getElementById('inp-cliente').value;
@@ -280,6 +298,12 @@ const app = {
     },
 
     /* --- ITEMS / MATERIALES --- */
+    // Métodos para gestionar materiales en proyectos:
+    // - cargarSelectMateriales: Carga los materiales disponibles en un selector.
+    // - agregarMaterial: Añade un material al proyecto activo.
+    // - eliminarItem: Elimina un material del proyecto activo.
+    // - sincronizarItemsConBD: Sincroniza los ítems del proyecto con la base de datos.
+    // - renderizarTablaItems: Renderiza la tabla de materiales del proyecto.
     cargarSelectMateriales: async () => {
         const lista = await DB.getMateriales();
         const select = document.getElementById('select-material-add');
@@ -382,6 +406,9 @@ const app = {
     },
 
     /* --- PDF --- */
+    // Métodos para generar reportes en PDF:
+    // - generarPDF: Genera un archivo PDF con los datos del proyecto activo.
+    // - actualizarDatosReporte: Actualiza los datos del reporte en la interfaz.
     generarPDF: async () => {
         if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
         
@@ -414,6 +441,13 @@ const app = {
     },
 
     /* --- INVENTARIO --- */
+    // Métodos para gestionar el inventario de materiales:
+    // - cargarTablaInventario: Muestra los materiales disponibles en una tabla.
+    // - abrirModalEditarMaterial: Abre el modal para editar un material.
+    // - guardarEdicionMaterial: Guarda los cambios realizados a un material.
+    // - toggleNuevoMaterial: Muestra/oculta el formulario para agregar un nuevo material.
+    // - guardarNuevoMaterial: Guarda un nuevo material en la base de datos.
+    // - aplicarInflacion: Aplica un aumento porcentual a los precios de los materiales.
     cargarTablaInventario: async () => {
         const lista = await DB.getMateriales();
         const tbody = document.getElementById('tabla-inventario');
@@ -528,4 +562,5 @@ const app = {
 };
 
 // INICIAR APLICACIÓN
+// Evento DOMContentLoaded: Llama al método app.start para iniciar la aplicación.
 document.addEventListener('DOMContentLoaded', app.start);

@@ -9,8 +9,17 @@
 </head>
 <body>
 
+    <!-- Estructura básica del documento HTML -->
+    <!-- Incluye metadatos, enlaces a estilos y el título de la aplicación -->
+
     <div class="app-container">
+        <!-- Contenedor principal de la aplicación -->
+        <!-- Incluye el menú lateral (sidebar) y el área de contenido principal -->
+
         <aside class="sidebar">
+            <!-- Sidebar -->
+            <!-- Contiene la navegación entre vistas: Panel Principal, Gestión de Obra e Inventario -->
+
             <div class="brand">
                 <span class="material-icons">CONSTRUCIONES</span>
                 <h2>GERDAU</h2>
@@ -31,6 +40,10 @@
 
         <main class="content">
             
+            <!-- Vista: Panel Principal -->
+            <!-- Muestra un resumen de los proyectos activos y materiales en catálogo -->
+            <!-- Incluye un formulario para crear nuevos proyectos -->
+
             <section id="view-dashboard" class="vista">
                 <header>
                     <h1>Panel de Control</h1>
@@ -80,6 +93,10 @@
                     </form>
                 </div>
             </section>
+
+            <!-- Vista: Gestión de Obra -->
+            <!-- Permite seleccionar un proyecto activo, editarlo, eliminarlo o generar un PDF -->
+            <!-- Incluye una tabla para listar los materiales asociados al proyecto -->
 
             <section id="view-proyecto" class="vista oculto">
                 
@@ -151,6 +168,9 @@
                     <p>Selecciona un proyecto arriba para comenzar a trabajar.</p>
                 </div>
 
+                <!-- Modal: Editar Proyecto -->
+                <!-- Formulario para modificar los datos de un proyecto existente -->
+
                 <dialog id="modal-editar" class="modal">
                     <div class="modal-content">
                         <h3>Editar Proyecto</h3>
@@ -189,6 +209,10 @@
                     </div>
                 </dialog>
             </section>
+
+            <!-- Vista: Catálogo e Inventario -->
+            <!-- Permite gestionar materiales, aplicar aumentos masivos y registrar nuevos materiales -->
+            <!-- Incluye una tabla para listar los materiales disponibles -->
 
             <section id="view-inventario" class="vista oculto no-print">
                 <header>
@@ -243,6 +267,9 @@
                     </table>
                 </div>
 
+                <!-- Modal: Editar Material -->
+                <!-- Formulario para modificar los datos de un material existente -->
+
                 <dialog id="modal-editar-material" class="modal">
                     <div class="modal-content">
                         <h3>Editar Material</h3>
@@ -274,6 +301,8 @@
         </main>
     </div>
 
+    <!-- Script principal -->
+    <!-- Conecta la lógica de la aplicación con el archivo renderer.js -->
     <script src="renderer.js"></script>
 </body>
 </html>

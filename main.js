@@ -1,8 +1,17 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
-const path = require('path')
-const db = require('./db/database')
-const fs = require('fs') // Necesario para guardar archivos
-const { dialog } = require('electron') // Para la ventana de guardar
+// Importación de módulos necesarios para la aplicación
+// - app: Controla el ciclo de vida de la aplicación.
+// - BrowserWindow: Crea ventanas de la aplicación.
+// - ipcMain: Maneja la comunicación entre procesos.
+// - path: Manejo de rutas de archivos.
+// - db: Base de datos SQLite.
+// - fs: Sistema de archivos para guardar archivos.
+// - dialog: Ventanas de diálogo para guardar archivos.
+
+// Función para crear la ventana principal de la aplicación
+// Configura el tamaño, las preferencias y carga el archivo HTML principal.
+
+// Evento que se ejecuta cuando la aplicación está lista para iniciar
+// Llama a la función createWindow para mostrar la ventana principal.
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -21,6 +30,10 @@ app.whenReady().then(createWindow)
 /* =======================
    MATERIALES
 ======================= */
+
+// Manejo de materiales en la base de datos:
+// - get-materiales: Obtiene todos los materiales.
+// - save-material: Guarda o actualiza un material.
 
 ipcMain.handle('get-materiales', () => {
   return new Promise((resolve, reject) => {
@@ -44,6 +57,14 @@ ipcMain.handle('save-material', (_, m) => {
 /* =======================
    PROYECTOS
 ======================= */
+
+// Manejo de proyectos en la base de datos:
+// - get-proyectos: Obtiene todos los proyectos.
+// - save-proyecto: Guarda o actualiza un proyecto.
+// - delete-proyecto: Elimina un proyecto por su ID.
+// - get-items: Obtiene los ítems de un proyecto.
+// - save-item: Guarda un ítem asociado a un proyecto.
+// - delete-items-proyecto: Elimina todos los ítems de un proyecto.
 
 ipcMain.handle('get-proyectos', () => {
   return new Promise((resolve, reject) => {
@@ -109,6 +130,11 @@ ipcMain.handle('delete-items-proyecto', (_, proyectoId) => {
 /* =======================
    GENERACIÓN DE PDF
 ======================= */
+
+// Generación de archivos PDF desde la ventana actual:
+// - Configura opciones de impresión (márgenes, tamaño de página, fondo).
+// - Abre un diálogo para que el usuario elija dónde guardar el archivo.
+// - Escribe el archivo PDF en la ruta seleccionada.
 
 ipcMain.handle('generate-pdf', async (event, nombreArchivo) => {
   const win = BrowserWindow.fromWebContents(event.sender)
