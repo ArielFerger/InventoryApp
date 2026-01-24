@@ -1,5 +1,5 @@
 /* ==========================================================================
-   renderer.js - VERSIÓN DEFINITIVA (Con Descripción de Proyecto)
+   renderer.js - VERSIÓN FINAL (Con UX mejorada: Enter y Focus automático)
    ========================================================================== */
 
 /* 1. MODELOS */
@@ -21,12 +21,11 @@ class ItemProyecto {
 }
 
 class Proyecto {
-    // ACTUALIZADO: Se agrega el parámetro 'descripcion'
     constructor(id, nombre, cliente, descripcion, ancho, largo) {
         this.id = id;
         this.nombre = nombre;
         this.cliente = cliente;
-        this.descripcion = descripcion || ""; // Guarda texto vacío si es nulo
+        this.descripcion = descripcion || ""; 
         this.ancho = Number(ancho);
         this.largo = Number(largo);
         this.items = []; 
@@ -38,7 +37,7 @@ class Proyecto {
     }
 }
 
-/* 2. REPOSITORIO (Puente con preload.js) */
+/* 2. REPOSITORIO */
 const DB = {
   getMateriales: () => window.db.getMateriales(),
   saveMaterial: (m) => window.db.saveMaterial(m),
@@ -62,7 +61,7 @@ const app = {
     start: async () => {
         try {
             await app.actualizarKPIs();
-            await app.actualizarListasCategorias(); // Cargar categorías dinámicas
+            await app.actualizarListasCategorias();
             await app.cargarSelectProyectos();
             await app.cargarTablaInventario();
             await app.cargarSelectMateriales();
@@ -73,7 +72,7 @@ const app = {
                 app.crearProyecto();
             });
 
-            // Listener: Editar Proyecto (El submit se maneja en abrirModalEditar)
+            // Listener: Editar Proyecto
             document.getElementById('form-editar-proyecto').addEventListener('submit', (e) => {
                 e.preventDefault();
             });
@@ -82,6 +81,21 @@ const app = {
             document.getElementById('form-editar-material').addEventListener('submit', (e) => {
                 e.preventDefault();
                 app.guardarEdicionMaterial();
+            });
+
+            // --- MEJORA UX 1: Al elegir un material, saltar directo a la cantidad ---
+            document.getElementById('select-material-add').addEventListener('change', () => {
+                const inpCantidad = document.getElementById('inp-cantidad-add');
+                inpCantidad.focus();
+                inpCantidad.select(); // Selecciona el texto por si quieres sobreescribir
+            });
+
+            // --- MEJORA UX 2: Al dar ENTER en cantidad, agregar el material ---
+            document.getElementById('inp-cantidad-add').addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault(); // Evitar comportamientos raros
+                    app.agregarMaterial();
+                }
             });
 
         } catch (error) {
@@ -115,13 +129,11 @@ const app = {
         const materiales = await DB.getMateriales();
         
         const categorias = new Set(materiales.map(m => m.categoria));
-        // Valores por defecto
         categorias.add("Obra Gruesa");
         categorias.add("Terminaciones");
         categorias.add("Instalaciones");
         categorias.add("Electricidad");
         
-        // 1. Llenar Datalist
         const datalist = document.getElementById('list-categorias');
         if(datalist) {
             datalist.innerHTML = '';
@@ -132,7 +144,6 @@ const app = {
             });
         }
 
-        // 2. Llenar Select Inflación
         const selectAumento = document.getElementById('sel-cat-aumento');
         if(selectAumento) {
             const valActual = selectAumento.value;
@@ -151,12 +162,11 @@ const app = {
     crearProyecto: async () => {
         const nombre = document.getElementById('inp-nombre').value;
         const cliente = document.getElementById('inp-cliente').value;
-        const desc = document.getElementById('inp-descripcion').value; // NUEVO
+        const desc = document.getElementById('inp-descripcion').value;
         const ancho = document.getElementById('inp-ancho').value;
         const largo = document.getElementById('inp-largo').value;
 
         const newId = Date.now();
-        // Pasamos la descripción al constructor
         const nuevo = new Proyecto(newId, nombre, cliente, desc, ancho, largo);
 
         await DB.saveProyecto(nuevo);
@@ -186,11 +196,10 @@ const app = {
     },
 
     cargarProyecto: async (id) => {
-        // A. Si no hay ID (se deseleccionó), ocultamos todo
         if (!id) {
             document.getElementById('empty-state-proyecto').classList.remove('oculto');
             document.getElementById('panel-detalle-proyecto').classList.add('oculto');
-            document.getElementById('display-descripcion-proyecto').classList.add('oculto'); // Ocultar descripción
+            document.getElementById('display-descripcion-proyecto').classList.add('oculto');
             app.proyectoActivo = null;
             return;
         }
@@ -199,16 +208,14 @@ const app = {
         const p = proyectos.find(proj => proj.id == id);
         
         if (p) {
-            // Reconstruimos el objeto
             app.proyectoActivo = new Proyecto(p.id, p.nombre, p.cliente, p.descripcion, p.ancho, p.largo);
             const itemsDB = await DB.getItems(id);
             app.proyectoActivo.items = itemsDB.map(i => new ItemProyecto(i.proyecto_id, i.material_id, i.cantidad));
 
-            // B. Mostrar Paneles Principales
             document.getElementById('empty-state-proyecto').classList.add('oculto');
             document.getElementById('panel-detalle-proyecto').classList.remove('oculto');
             
-            // C. LÓGICA NUEVA: Mostrar/Ocultar Descripción
+            // Mostrar descripción si existe
             const elDesc = document.getElementById('display-descripcion-proyecto');
             if (app.proyectoActivo.descripcion && app.proyectoActivo.descripcion.trim() !== "") {
                 elDesc.textContent = app.proyectoActivo.descripcion;
@@ -226,23 +233,21 @@ const app = {
     abrirModalEditar: () => {
         if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
         
-        // Llenar datos actuales en el modal
         document.getElementById('edit-nombre').value = app.proyectoActivo.nombre;
         document.getElementById('edit-cliente').value = app.proyectoActivo.cliente;
-        document.getElementById('edit-descripcion').value = app.proyectoActivo.descripcion; // NUEVO
+        document.getElementById('edit-descripcion').value = app.proyectoActivo.descripcion;
         document.getElementById('edit-ancho').value = app.proyectoActivo.ancho;
         document.getElementById('edit-largo').value = app.proyectoActivo.largo;
 
         const modal = document.getElementById('modal-editar');
         modal.showModal();
 
-        // Manejar el guardado
         document.getElementById('form-editar-proyecto').onsubmit = async (e) => {
             e.preventDefault();
             
             app.proyectoActivo.nombre = document.getElementById('edit-nombre').value;
             app.proyectoActivo.cliente = document.getElementById('edit-cliente').value;
-            app.proyectoActivo.descripcion = document.getElementById('edit-descripcion').value; // NUEVO
+            app.proyectoActivo.descripcion = document.getElementById('edit-descripcion').value;
             app.proyectoActivo.ancho = document.getElementById('edit-ancho').value;
             app.proyectoActivo.largo = document.getElementById('edit-largo').value;
             
@@ -253,6 +258,8 @@ const app = {
             await app.cargarSelectProyectos();
             document.getElementById('select-proyecto-activo').value = app.proyectoActivo.id;
             app.actualizarDatosReporte();
+            // Actualizar vista visual de descripcion si cambió
+            app.cargarProyecto(app.proyectoActivo.id);
         };
     },
 
@@ -272,7 +279,7 @@ const app = {
         }
     },
 
-    /* --- ITEMS / MATERIALES EN OBRA --- */
+    /* --- ITEMS / MATERIALES --- */
     cargarSelectMateriales: async () => {
         const lista = await DB.getMateriales();
         const select = document.getElementById('select-material-add');
@@ -303,6 +310,10 @@ const app = {
 
         await app.sincronizarItemsConBD();
         document.getElementById('inp-cantidad-add').value = '';
+        
+        // Volver el foco al selector de materiales para seguir agregando rápido
+        document.getElementById('select-material-add').focus();
+        
         await app.renderizarTablaItems();
     },
 
@@ -370,18 +381,16 @@ const app = {
         document.getElementById('info-header-proyecto').textContent = `Total: ${app.formatMoney(totalProyecto)}`;
     },
 
-    /* --- PDF Y REPORTES --- */
+    /* --- PDF --- */
     generarPDF: async () => {
         if (!app.proyectoActivo) return alert("Selecciona un proyecto primero");
         
         app.actualizarDatosReporte();
         
-        // Poner fecha actual
         const fechaHoy = new Date().toLocaleDateString('es-AR');
         const elFecha = document.getElementById('reporte-fecha');
         if(elFecha) elFecha.textContent = fechaHoy;
 
-        // Sanitizar nombre de archivo
         let nombreLimpio = app.proyectoActivo.nombre.trim();
         nombreLimpio = nombreLimpio.replace(/\s+/g, '_');
         nombreLimpio = nombreLimpio.replace(/[^a-zA-Z0-9_\-]/g, '');
@@ -404,7 +413,7 @@ const app = {
         }
     },
 
-    /* --- INVENTARIO / MATERIALES --- */
+    /* --- INVENTARIO --- */
     cargarTablaInventario: async () => {
         const lista = await DB.getMateriales();
         const tbody = document.getElementById('tabla-inventario');
